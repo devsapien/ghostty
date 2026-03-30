@@ -36,6 +36,14 @@ pub fn unload() void {
     context = undefined;
 }
 
+/// Reload the GL function pointers for the current context. Returns true if
+/// at least one function was loaded. This is used by the embedded Linux
+/// platform after a GtkGLArea context becomes current on a new frame.
+pub fn reload() bool {
+    const res = c.gladLoaderLoadGLContext(&context);
+    return res != 0;
+}
+
 pub fn versionMajor(res: c_uint) c_uint {
     return c.GLAD_VERSION_MAJOR(res);
 }

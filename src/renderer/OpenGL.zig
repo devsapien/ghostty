@@ -234,18 +234,20 @@ pub fn threadExit(self: *const OpenGL) void {
     }
 }
 
-pub fn displayRealized(self: *const OpenGL) void {
-    _ = self;
+pub fn displayRealized(self: *OpenGL) void {
+    self.last_target = null;
 
     switch (apprt.runtime) {
-        apprt.gtk => prepareContext(null) catch |err| {
+        apprt.gtk,
+        apprt.embedded,
+        => prepareContext(null) catch |err| {
             log.warn(
                 "Error preparing GL context in displayRealized, err={}",
                 .{err},
             );
         },
 
-        else => @compileError("only GTK should be calling displayRealized"),
+        else => @compileError("only GTK/embedded should be calling displayRealized"),
     }
 }
 

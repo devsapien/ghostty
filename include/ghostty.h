@@ -17,11 +17,6 @@ extern "C" {
 #include <stdint.h>
 #include <sys/types.h>
 
-#ifdef _MSC_VER
-#include <BaseTsd.h>
-typedef SSIZE_T ssize_t;
-#endif
-
 //-------------------------------------------------------------------
 // Macros
 
@@ -43,6 +38,7 @@ typedef enum {
   GHOSTTY_PLATFORM_INVALID,
   GHOSTTY_PLATFORM_MACOS,
   GHOSTTY_PLATFORM_IOS,
+  GHOSTTY_PLATFORM_LINUX,
 } ghostty_platform_e;
 
 typedef enum {
@@ -431,9 +427,14 @@ typedef struct {
   void* uiview;
 } ghostty_platform_ios_s;
 
+typedef struct {
+  void* gl_area;
+} ghostty_platform_gtk_s;
+
 typedef union {
   ghostty_platform_macos_s macos;
   ghostty_platform_ios_s ios;
+  ghostty_platform_gtk_s gtk;
 } ghostty_platform_u;
 
 typedef enum {
@@ -441,6 +442,13 @@ typedef enum {
   GHOSTTY_SURFACE_CONTEXT_TAB = 1,
   GHOSTTY_SURFACE_CONTEXT_SPLIT = 2,
 } ghostty_surface_context_e;
+
+typedef enum {
+  GHOSTTY_SURFACE_IO_EXEC = 0,
+  GHOSTTY_SURFACE_IO_MANUAL = 1,
+} ghostty_surface_io_mode_e;
+
+typedef void (*ghostty_io_write_cb)(void*, const char*, uintptr_t);
 
 typedef struct {
   ghostty_platform_e platform_tag;
@@ -455,6 +463,9 @@ typedef struct {
   const char* initial_input;
   bool wait_after_command;
   ghostty_surface_context_e context;
+  ghostty_surface_io_mode_e io_mode;
+  ghostty_io_write_cb io_write_cb;
+  void* io_write_userdata;
 } ghostty_surface_config_s;
 
 typedef struct {
@@ -467,12 +478,6 @@ typedef struct {
 } ghostty_surface_size_s;
 
 // Config types
-
-// config.Path
-typedef struct {
-  const char* path;
-  bool optional;
-} ghostty_config_path_s;
 
 // config.Color
 typedef struct {
@@ -894,7 +899,6 @@ typedef enum {
   GHOSTTY_ACTION_RENDER_INSPECTOR,
   GHOSTTY_ACTION_DESKTOP_NOTIFICATION,
   GHOSTTY_ACTION_SET_TITLE,
-  GHOSTTY_ACTION_SET_TAB_TITLE,
   GHOSTTY_ACTION_PROMPT_TITLE,
   GHOSTTY_ACTION_PWD,
   GHOSTTY_ACTION_MOUSE_SHAPE,
@@ -943,7 +947,6 @@ typedef union {
   ghostty_action_inspector_e inspector;
   ghostty_action_desktop_notification_s desktop_notification;
   ghostty_action_set_title_s set_title;
-  ghostty_action_set_title_s set_tab_title;
   ghostty_action_prompt_title_e prompt_title;
   ghostty_action_pwd_s pwd;
   ghostty_action_mouse_shape_e mouse_shape;
@@ -975,7 +978,7 @@ typedef struct {
 } ghostty_action_s;
 
 typedef void (*ghostty_runtime_wakeup_cb)(void*);
-typedef bool (*ghostty_runtime_read_clipboard_cb)(void*,
+typedef void (*ghostty_runtime_read_clipboard_cb)(void*,
                                                   ghostty_clipboard_e,
                                                   void*);
 typedef void (*ghostty_runtime_confirm_read_clipboard_cb)(
@@ -1102,6 +1105,7 @@ bool ghostty_surface_key_is_binding(ghostty_surface_t,
                                     ghostty_binding_flags_e*);
 void ghostty_surface_text(ghostty_surface_t, const char*, uintptr_t);
 void ghostty_surface_preedit(ghostty_surface_t, const char*, uintptr_t);
+void ghostty_surface_process_output(ghostty_surface_t, const char*, uintptr_t);
 bool ghostty_surface_mouse_captured(ghostty_surface_t);
 bool ghostty_surface_mouse_button(ghostty_surface_t,
                                   ghostty_input_mouse_state_e,
@@ -1131,6 +1135,8 @@ void ghostty_surface_complete_clipboard_request(ghostty_surface_t,
                                                 void*,
                                                 bool);
 bool ghostty_surface_has_selection(ghostty_surface_t);
+bool ghostty_surface_select_cursor_cell(ghostty_surface_t);
+bool ghostty_surface_clear_selection(ghostty_surface_t);
 bool ghostty_surface_read_selection(ghostty_surface_t, ghostty_text_s*);
 bool ghostty_surface_read_text(ghostty_surface_t,
                                ghostty_selection_s,
@@ -1175,6 +1181,11 @@ void ghostty_set_window_background_blur(ghostty_app_t, void*);
 
 // Benchmark API, if available.
 bool ghostty_benchmark_cli(const char*, const char*);
+
+// cmux-linux: OpenGL display management for embedded Linux platform.
+void ghostty_surface_display_realized(ghostty_surface_t);
+void ghostty_surface_display_unrealized(ghostty_surface_t);
+void ghostty_surface_mark_dirty(ghostty_surface_t);
 
 #ifdef __cplusplus
 }
