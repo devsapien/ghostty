@@ -170,9 +170,9 @@ pub fn surfaceInit(surface: *apprt.Surface) !void {
         => try prepareContext(null),
 
         apprt.embedded => {
-            // TODO(mitchellh): this does nothing today to allow libghostty
-            // to compile for OpenGL targets but libghostty is strictly
-            // broken for rendering on this platforms.
+            // For embedded Linux (cmux), the GL context is made current
+            // by the embedder before surface creation. Load glad from it.
+            try prepareContext(null);
         },
     }
 
